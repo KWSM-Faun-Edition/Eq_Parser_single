@@ -141,12 +141,16 @@ class MainWindow(QMainWindow):
         self.file = None
         self.setup_ui()
         self.show()
-        self.setup_config()
+        
+        self.directory = ''
+        res = self.setup_config()
+        if not res:
+            sys.exit()
         self.start_watcher_directory()
 
     def setup_config(self):
 
-        self.directory = None
+        '''
         self.cwd = os.getcwd()
         self.config_exists = os.path.exists(self.cwd+"\parseconfig.ini")
         self.config = ConfigParser()
@@ -176,6 +180,38 @@ class MainWindow(QMainWindow):
                     self.config.write(configfile)
             else:
                 sys.exit()
+        '''
+        config = ConfigParser()
+        config_file = 'config.ini'
+        if os.path.exists(config_file):
+            config.read(config_file)
+            if config.has_option('default', 'directory'):
+                self.directory = config['default']['directory']
+                return config
+        
+        button = QMessageBox.information(
+            self,
+            "Directory Not Selected",
+            "Click Ok to select your EverQuest Directory",
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+        )
+        if button != QMessageBox.Ok:
+            return None
+            
+        self.directory = QFileDialog.getExistingDirectory(
+            caption='Select your EverQuest Directory')
+        if not self.directory:
+            return None
+        if '/Logs' not in self.directory:
+            self.directory += '/Logs'
+        if not os.path.exists(self.directory):
+            self.setup_config()
+        config.add_section('default')
+        config.set('default', 'directory', self.directory)
+        with open(config_file, 'w') as cf:
+            config.write(cf)
+        return config
+            
 
     def setup_ui(self):
         self.setWindowTitle("Who Parser")
